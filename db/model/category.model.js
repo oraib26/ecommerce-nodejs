@@ -15,6 +15,12 @@ const categorySchema = new Schema(
             type:String,
             required:true
         },
+        status:{
+            type:String,
+            default:"not active"
+                
+
+        },
         createdBy:{type:Types.ObjectId, ref:'User', required:false},
         updatedBy:{type:Types.ObjectId, ref:'User', required:false},
        
