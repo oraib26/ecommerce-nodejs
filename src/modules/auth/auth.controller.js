@@ -1,6 +1,7 @@
 import userModel from "../../../db/model/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from 'jsonwebtoken';
+import { sendeEmail } from "../../utls/email.js";
 export const register = async (req, res) => {
   const { userName, email, password } = req.body;
 
@@ -17,6 +18,9 @@ export const register = async (req, res) => {
     email,
     password: hashPassword,
   });
+
+  await sendeEmail(email,'Welcome',`<h2> Hello Ya ${userName} :)</h2>`)
+
   return res.status(201).json({ message: "success", user: addUser });
 };
 
