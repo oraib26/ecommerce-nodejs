@@ -14,7 +14,7 @@ export const create = async (req, res) => {
   const { secure_url, public_id } = await cloudinary.uploader.upload(
     req.file.path,
     {
-      folder: "oshope5/categories",
+      folder: `${process.env.STORENAME}/categories`,
     }
   );
 
@@ -74,7 +74,7 @@ export const update = async (req, res) => {
     const { secure_url, public_id } = await cloudinary.uploader.upload(
       req.file.path,
       {
-        folder: "oshope5/categories",
+        folder: `${process.env.STORENAME}/categories`,
       }
     );
     await cloudinary.uploader.destroy(category.image.public_id);
