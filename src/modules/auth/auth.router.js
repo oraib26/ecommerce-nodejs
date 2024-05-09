@@ -4,6 +4,8 @@ const router = Router({caseSensitive: true});
 
 router.post('/register', controller.register);
 router.post('/login', controller.login);
+router.patch('/sendCode', controller.sendCode);
+router.patch('/forgetPassword', controller.forgetPassword);
 
 
 
