@@ -28,7 +28,10 @@ export const create = async (req, res) => {
 };
 
 export const getAll = async (req, res) => {
-  const categories = await categoryModel.find({});
+  const categories = await categoryModel.find({}).populate({
+    path:'subcategory',
+
+  });
   return res.status(200).json({ message: "success", categories });
 };
 
