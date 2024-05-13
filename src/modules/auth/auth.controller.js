@@ -31,6 +31,9 @@ export const login = async (req, res) => {
   if (!user) {
     return res.status(400).json({ message: "invalid data" });
   }
+  if(!user.confirmEmail){
+    return res.json({message:"plz confirm your email"})
+  }
   const match = await bcrypt.compare(password, user.password);
   if (!match) {
     return res.status(400).json({ message: "invalid data" });
