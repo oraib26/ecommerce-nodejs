@@ -74,16 +74,9 @@ const productSchema = new Schema(
     },
     {
         timestamps:true,
-        toJSON:{virtuals:true},
-        toObject:{virtuals:true}
 
     }
 )
-productSchema.virtual("subproduct",{
-    localField:"_id",
-    foreignField:"productId",
-    ref:"Subproduct"
-})
 const productModel = model('Product',productSchema);
 
 export default productModel;

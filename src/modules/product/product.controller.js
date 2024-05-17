@@ -18,6 +18,7 @@ export const create =async(req, res) => {
   }
   req.body.slug = slugify(productName);
   req.body.finalPrice = price - (( price * (discount || 0)) / 100)
+
   
   const { secure_url, public_id } = await cloudinary.uploader.upload(
     req.files.mainImage[0].path,
