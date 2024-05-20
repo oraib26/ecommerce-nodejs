@@ -3,6 +3,8 @@ import categoriesRouter from "./modules/category/category.router.js";
 import productsRouter from "./modules/product/product.router.js";
 import authRouter from "./modules/auth/auth.router.js";
 import cartRouter from "./modules/cart/cart.router.js";
+import couponRouter from "./modules/coupon/coupon.router.js";
+import orderRouter from "./modules/order/order.router.js";
 
 const initApp = (app, express) => {
   connectDB();
@@ -14,6 +16,8 @@ const initApp = (app, express) => {
   app.use("/auth", authRouter);
   app.use("/products", productsRouter);
   app.use("/cart", cartRouter);
+  app.use("/order", orderRouter);
+  app.use("/coupon", couponRouter);
 
   app.use("*", (req, res) => {
     return res.status(404).json({ message: "Page not found" });
