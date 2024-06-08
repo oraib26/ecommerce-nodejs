@@ -5,10 +5,12 @@ const orderSchema = new Schema(
         userId:{
             type:Types.ObjectId,
             ref:'User',
-            required:true,
-            unique:true
+            required:true
         },
         products:[{
+            productName:{
+                type: String,
+            },
             productId:{
                 type:Types.ObjectId,
                 ref:'Product',
@@ -31,6 +33,10 @@ const orderSchema = new Schema(
 
             
         }],
+        finalPrice:{
+            type:Number,
+            required:true,
+        },
         address:{
             type:String,
             required:true,
@@ -59,7 +65,7 @@ const orderSchema = new Schema(
         updatedBy:{
             type:Types.ObjectId,
             ref:'User',
-            required:false},
+            required:true},
         couponId:{
             type:Types.ObjectId,
             ref:'Coupon',
