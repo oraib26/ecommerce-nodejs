@@ -139,7 +139,6 @@ export const changeStatus = async (req, res) => {
   if(!order){
     return res.status(400).json({message:"order not found"})
   }
- // await order.save();
 
   return res.status(200).json({message:"success",order})
 };
