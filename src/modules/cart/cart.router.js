@@ -1,21 +1,34 @@
 import { Router } from "express";
-import * as controller from './cart.controller.js'
+import * as cartController from "./cart.controller.js";
 import { auth } from "../../middleware/auth.js";
-import { endPoints } from "./cart.role.js";
+import { asyncHandler } from "../../utls/errorHandling.js";
+import { endpoints } from "./cart.endPoint.js";
+import * as validators from "./cart.validation.js";
+import { validation } from "../../middleware/validation.js";
 const router = Router();
 
-router.post('/',auth(endPoints.create),controller.create);
-
-router.patch('/:productId',auth(endPoints.delete),controller.remove);
-
-router.patch('/clear',auth(endPoints.delete),controller.clearCart);
-
-router.get('/',auth(endPoints.create),controller.get);
-
-router.patch('/updateQuantity/:productId', auth(endPoints.create), controller.updateQuantity);
-
-
-
-
-
+router.get("/", auth(endpoints.get), asyncHandler(cartController.getCart));
+router.post(
+  "/",
+  auth(endpoints.create),
+  validation(validators.productIdValid),
+  asyncHandler(cartController.createCart)
+);
+router.put(
+  "/clearCart",
+  auth(endpoints.clear),
+  asyncHandler(cartController.clearCart)
+);
+router.put(
+  "/:productId",
+  auth(endpoints.delete),
+  validation(validators.productIdValid),
+  asyncHandler(cartController.removeItem)
+);
+router.put(
+  "/updateQuantity/:productId",
+  auth(endpoints.update),
+  validation(validators.updateQuantityvalid),
+  asyncHandler(cartController.updateQuantity)
+);
 export default router;

@@ -1,102 +1,123 @@
-import { response } from "express";
-import cartModel from "../../../db/model/cart.model.js";
-import couponModel from "../../../db/model/coupon.model.js";
-import orderModel from "../../../db/model/order.model.js";
-import productModel from "../../../db/model/product.model.js";
-import userModel from "../../../db/model/user.model.js";
+import cartModel from "../../../DB/model/cart.model.js";
+import couponModel from "../../../DB/model/coupon.model.js";
+import orderModel from "../../../DB/model/order.model.js";
+import productModel from "../../../DB/model/product.model.js";
+import userModel from "../../../DB/model/user.model.js";
+import { AppError } from "../../utls/AppError.js";
 
-export const create = async (req, res) => {
+import Stripe from "stripe";
+import createInvoice from "../../utls/pdf.js";
+const stripe = new Stripe(process.env.sekStrip);
+
+export const createOrder = async (req, res, next) => {
+  //check carts
+  const { couponName } = req.body;
   const cart = await cartModel.findOne({ userId: req.user._id });
 
-  // return res.json({cart})
   if (!cart || cart.products.length === 0) {
-    return res.status(400).json("cart is empty");
+    return next(new AppError(`cart is empty`, 400));
   }
-  //return res.json(cart);
   req.body.products = cart.products;
-  //  return res.json( req.body.couponName);
-  if (req.body.couponName) {
-    const coupon = await couponModel.findOne({ name: req.body.couponName });
-    //  return res.json(coupon);
+
+  if (couponName) {
+    const coupon = await couponModel.findOne({ name: couponName });
     if (!coupon) {
-      return res.status(400).json("coupon not found");
+      return next(new AppError(`coupon not found`, 404));
     }
-
-    if (coupon.expireDate < new Date()) {
-      return res.status(400).json("coupon was expired");
+    const currentDate = new Date();
+    if (coupon.expireDate <= currentDate) {
+      return next(new AppError(`this coupon has expried`, 400));
     }
-
     if (coupon.usedBy.includes(req.user._id)) {
-      return res.status(409).json("coupon already used");
+      return next(new AppError(`coupon already used`, 409));
     }
-
     req.body.coupon = coupon;
   }
-  //return res.json(req.body.coupon);
+
+  let subTotals = 0;
   let finalProductList = [];
-  let subTotal = 0;
   for (let product of req.body.products) {
     const checkProduct = await productModel.findOne({
       _id: product.productId,
-      stock: {
-        $gte: product.quantity,
-      },
+      stock: { $gte: product.quantity },
     });
+
     if (!checkProduct) {
-      return res.status(400).json("product quantity not available");
+      return next(new AppError(`product quantity not available`, 400));
     }
-
     product = product.toObject();
-
-    product.name = checkProduct.productName;
-    product.untiPrice = checkProduct.price;
+    product.name = checkProduct.name;
+    product.unitPrice = checkProduct.price;
     product.discount = checkProduct.discount;
     product.finalPrice = product.quantity * checkProduct.finalPrice;
-    subTotal += product.finalPrice;
+    subTotals += product.finalPrice;
     finalProductList.push(product);
   }
+
   const user = await userModel.findById(req.user._id);
-  // return res.json(user)
-
-  if (!req.body.address) {
-    req.body.address = user.address;
+  if (!req.body.Address) {
+    req.body.Address = user.Address;
   }
-
-  if (!req.body.phone) {
-    req.body.phone = user.phone;
+  if (!req.body.phoneNumber) {
+    req.body.phoneNumber = user.phoneNumber;
   }
-  // return res.json(user._id)
-
+  /*
+  const session = await stripe.checkout.sessions.create({
+    line_items: [
+        {
+        
+          price_data:{
+            currency:'USD',
+            unit_amount:subTotals - (subTotals * (( req.body.coupon?.amount || 0 )) / 100),
+            product_data:{
+                name:user.userName
+            }
+          } ,
+          quantity: 1,
+        }
+      ],
+      mode: 'payment',
+      success_url: `http://www.facebook.com`,
+      cancel_url: `http://www.youtub.com`,
+  })
+  return res.json(session)
+  */
   const order = await orderModel.create({
     userId: req.user._id,
     products: finalProductList,
-    finalPrice: subTotal - subTotal * ((req.body.coupon?.amount || 0) / 100),
-    address: req.body.address,
-    phoneNumber: req.body.phone,
-    updatedBy: req.user._id,
+    finalPrice: subTotals - (subTotals * (req.body.coupon?.amount || 0)) / 100,
+    Address: req.body.Address,
+    phoneNumber: req.body.phoneNumber,
   });
-
   if (order) {
+    const invoice = {
+      shipping: {
+        name: user.userName,
+        address: order.Address,
+        phone: order.phoneNumber,
+      },
+      items: order.products,
+      subtotal: order.finalPrice,
+
+      invoice_nr: order._id,
+    };
+
+    createInvoice(invoice, "invoice.pdf");
+
     for (const product of req.body.products) {
-      await productModel.findOneAndUpdate(
+      await productModel.updateOne(
         { _id: product.productId },
-        {
-          $inc: {
-            stock: -product.quantity,
-          },
-        }
+        { $inc: { stock: -product.quantity } }
       );
     }
+
     if (req.body.coupon) {
-      await couponModel.findOneAndUpdate(
+      await couponModel.updateOne(
         { _id: req.body.coupon._id },
-        {
-          $addToSet: {
-            usedBy: req.user._id,
-          },
-        }
+        { $addToSet: { usedBy: req.user._id } }
       );
     }
+
     await cartModel.updateOne(
       { userId: req.user._id },
       {
@@ -105,10 +126,10 @@ export const create = async (req, res) => {
     );
   }
 
-  return res.json({ message: "success", order });
+  return res.status(201).json({ message: "success", order });
 };
 
-export const getOrders = async (req, res) => {
+export const getallOrder = async (req, res) => {
   const orders = await orderModel.find({
     $or: [
       {
@@ -119,26 +140,20 @@ export const getOrders = async (req, res) => {
       },
     ],
   });
-
   return res.json({ message: "success", orders });
 };
-
-export const getUserOrders = async (req, res) => {
+export const getOrderUser = async (req, res) => {
   const order = await orderModel.find({ userId: req.user._id });
-
   return res.json({ message: "success", order });
 };
-
-export const changeStatus = async (req, res) => {
-  const { status,orderId } = req.body;
-  //const { orderId } = req.params; 
-  //when i user req.params displays message "page not found " in postman , i try to handle this error but ..  :()
-  const order = await orderModel.findOneAndUpdate({_id: orderId},{
-    status : status
-  },{ new: true })
-  if(!order){
-    return res.status(400).json({message:"order not found"})
+export const changeStatus = async (req, res, next) => {
+  const { orderId } = req.params;
+  const { status } = req.body;
+  const order = await orderModel.findById(orderId);
+  if (!order) {
+    return next(new AppError(`order not found`, 404));
   }
-
-  return res.status(200).json({message:"success",order})
+  order.status = status;
+  await order.save();
+  return res.json({ message: "success", order });
 };

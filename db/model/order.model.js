@@ -1,82 +1,48 @@
-import mongoose, { Schema, Types, model } from "mongoose";
-
+import mongoose, { Schema, model, Types } from "mongoose";
 const orderSchema = new Schema(
-    {
-        userId:{
-            type:Types.ObjectId,
-            ref:'User',
-            required:true
-        },
-        products:[{
-            productName:{
-                type: String,
-            },
-            productId:{
-                type:Types.ObjectId,
-                ref:'Product',
-                required:true,
-
-            },
-            quantity:{
-                type:Number,
-                required:true,
-                default:1
-            },
-            untiPrice:{
-                type:Number,
-                required:true,
-            },
-            finalPrice:{
-                type:Number,
-                required:true,
-            }
-
-            
-        }],
-        finalPrice:{
-            type:Number,
-            required:true,
-        },
-        address:{
-            type:String,
-            required:true,
-        },
-        phoneNumber:{
-            type:String,
-            required:true,
-        },
-        paymentType:{
-            type:String,
-            enum:['cash','cart'],
-            default:"cash",
-            required:true,
-        },
-        status:{
-            type:String,
-            enum:['pending','cancelled','confirmed','onway','delivered'],
-            default:"pending"
-        },
-        notes:{
-            type:String,
-        },
-        rejectedReason:{
-            type:String,
-        },
-        updatedBy:{
-            type:Types.ObjectId,
-            ref:'User',
-            required:true},
-        couponId:{
-            type:Types.ObjectId,
-            ref:'Coupon',
-        }    
-
+  {
+    userId: {
+      type: Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-    {
-        timestamps:true,
-    }
-)
+    products: [
+      {
+        productId: { type: Types.ObjectId, ref: "Product", required: true },
+        quantity: { type: Number, default: 1, required: true },
+        unitPrice: { type: Number, required: true },
+        finalPrice: { type: Number, required: true },
+        productName: { type: String },
+      },
+    ],
+    finalPrice: {
+      type: Number,
+      required: true,
+    },
+    Address: { type: String, required: true },
+    phoneNumber: { type: String, required: true },
 
-const orderModel = model('Order',orderSchema);
-
+    paymentType: {
+      type: String,
+      default: "cash",
+      enum: ["cart", "cash"],
+    },
+    couponName: {
+      type: String,
+      requierd: true,
+    },
+    status: {
+      type: String,
+      default: "pending",
+      enum: ["pending", "cancelled", "confirmed", "onWay", "deliverd"],
+    },
+    Rejectedreason: { type: String },
+    notes: { type: String },
+    updatedBy: { type: Types.ObjectId, ref: "User" },
+  },
+  {
+    timestamps: true,
+  }
+);
+const orderModel = mongoose.models.Order || model("Order", orderSchema);
 export default orderModel;

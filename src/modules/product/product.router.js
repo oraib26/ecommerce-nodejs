@@ -1,19 +1,24 @@
 import { Router } from "express";
-import * as cotroller from './product.controller.js'
-import fileUpload, { fileTypes } from "../../utls/multer.js";
-import { endPoints } from "../product/product.role.js";
+import * as productController from "./product.controller.js";
+import fileUpload, { fileValidation } from "../../utls/multer.js";
 import { auth } from "../../middleware/auth.js";
-import reviewRouter from '../review/review.router.js'
-const router = Router({caseSensitive: true});
+import { endPoint } from "./product.endPoint.js";
+import reviewRouter from "./../review/review.router.js";
+import { asyncHandler } from "../../utls/errorHandling.js";
+import { validation } from "../../middleware/validation.js";
+import { createproduct } from "./product.validation.js";
 
-
-router.use('/:productId/review', reviewRouter)
-router.post("/",auth(endPoints.create),fileUpload(fileTypes.image).fields([
-    {name:'mainImage',maxCount:1},
-    {name:'subImages',maxCount:5},
-   
-]),cotroller.create);
-
-router.get('/',auth(endPoints.getAll),cotroller.getAll);
-
+const router = Router();
+router.use("/:productId/review", reviewRouter);
+router.get("/", productController.getproduct);
+router.post(
+  "/",
+  auth(endPoint.create),
+  fileUpload(fileValidation.image).fields([
+    { name: "mainImage", maxCount: 1 },
+    { name: "subImages", maxCount: 4 },
+  ]),
+  validation(createproduct),
+  asyncHandler(productController.createProduct)
+);
 export default router;

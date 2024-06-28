@@ -1,89 +1,108 @@
-import userModel from "../../../db/model/user.model.js";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { sendeEmail } from "../../utls/email.js";
-import {customAlphabet, nanoid} from "nanoid";
-export const register = async (req, res) => {
-  const { userName, email, password } = req.body;
+import userModel from "../../../DB/model/user.model.js";
+import bcrypt from 'bcryptjs';
+import  jwt from 'jsonwebtoken';
+import { sendEmail } from "../../utls/sendEmail.js";
+import { customAlphabet } from 'nanoid'
+import xlsx from "xlsx";
+import { AppError } from "../../utls/AppError.js";
 
-  const user = await userModel.findOne({ email });
-  if (user) {
-    return res.status(409).json({ message: "email already exists" });
-  }
-  const hashPassword = bcrypt.hashSync(
-    password,
-    parseInt(process.env.SALTROUND)
-  );
-  const addUser = await userModel.create({
-    userName,
-    email,
-    password: hashPassword,
-  });
 
-  await sendeEmail(email, "Welcome", `<h2> Hello Ya ${userName} :)</h2>`);
+export const getUsers = async(req,res,next)=>{
+    
+  return res.json(req.user);
+}
+export const signUp = async(req,res,next)=>{
 
-  return res.status(201).json({ message: "success", user: addUser });
-};
+  const {userName,email,password} = req.body;
+  const hashedPassword=await bcrypt.hash(password,parseInt(process.env.SALT_ROUND));
+  
+const token= jwt.sign({email},process.env.CONFIRMEMAILSECRET);
+const createUser = await userModel.create({ userName, email, password: hashedPassword });
+if (!createUser) {
+  return next(new AppError(`error while creat user`,400));
+  
+}
+await sendEmail(email, `welcome`,userName,token)
+return res.status(201).json({ message: "success",user:createUser });
 
-export const login = async (req, res) => {
-  const { email, password } = req.body;
-  const user = await userModel.findOne({ email });
-  if (!user) {
-    return res.status(400).json({ message: "invalid data" });
-  }
-  if(!user.confirmEmail){
-    return res.json({message:"plz confirm your email"})
-  }
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) {
-    return res.status(400).json({ message: "invalid data" });
-  }
-  const token = jwt.sign(
-    { id: user._id, role: user.role, status: user.status },
-    process.env.LOGINSIG
-  );
+}
+export const addUserExcel=async(req,res)=>{
+const workbook=xlsx.readFile(req.file.path);
+const worksheet=workbook.Sheets[workbook.SheetNames[0]];
+const users=xlsx.utils.sheet_to_json(worksheet);
+await userModel.insertMany(users);
+return res.status(200).json(users);
+}
+export const confirmEmail = async (req, res, next) => {
+  const token = req.params.token;
+  const decoded = jwt.verify(token,process.env.CONFIRMEMAILSECRET);
+ await userModel.findOneAndUpdate({email:decoded.email},{confirmEmail: true }
+    );
+ return res.json({message:"success"})
 
-  return res.status(200).json({ message: "success", token });
-};
 
-export const sendCode = async (req, res) => {
-  const { email } = req.body;
-
-  const code = customAlphabet("1234567890abcdef", 4)();
-
-  const user = await userModel.findOneAndUpdate(
-    { email },
-    { sendCode: code },
-    { new: true }
-  );
-
-  if (!user) {
-    return res.status(404).json({ message: "email not found" });
-  }
-  await sendeEmail(email, "reset password", `<h2>your code is : ${code}</h2>`);
-
-  return res.status(200).json({ message: "success" });
-};
-
-export const forgetPassword = async(req, res)=>{
-  const {email, password, code} = req.body;
+}
+export const signIn = async(req,res,next)=>{
+  const {email,password} = req.body;
   const user = await userModel.findOne({email});
-
   if(!user){
-    return res.status(404).json({ message: "email not found" });
+    return next(new AppError(`email not found`,404));
   }
 
+  if(!user.confirmEmail){
+    return next(new AppError(`plz confirm your email`,400));
+   
+
+  }
+  const match = await bcrypt.compare(password,user.password);
+  if(!match){
+    return next(new AppError(`Invalid Pssword`,400));
+     
+
+  }
+
+  const token = jwt.sign({id:user._id,role:user.role,status:user.status},process.env.LOGINSECRET
+      ,{expiresIn:'1h'}
+      );
+
+  const refreshToken = jwt.sign({id:user._id,role:user.role,status:user.status},process.env.LOGINSECRET,
+      {expiresIn:60*60*24*30})
+      
+  return res.status(200).json({message:"success",token,refreshToken});
+}
+export const sendCode = async(req,res,next)=>{ 
+  const {email} = req.body;
+  let code = customAlphabet('1234567890abcdzABCDZ', 4)
+  code =code();
+  const user = await userModel.findOneAndUpdate({email},{sendCode:code},{new:true});
+  const html = `<h2>code is : ${code} </h2> `
+  await sendEmail(email,`reset password`,html);
+  return res.redirect(process.env.FORGOTPASSWORDFROM)
+}
+export const forgotPassword = async(req,res,next)=>{
+  const {email,password,code} = req.body;
+  const user = await userModel.findOne({email});
+  if(!user){
+    return next(new AppError(`not register account`,409));
+     
+  }
   if(user.sendCode != code){
-    return res.status(400).json({ message: "invalid data" });
+    return next(new AppError(`invalid code`,400));
+     
   }
-
-  user.password = await bcrypt.hash(password,parseInt(process.env.SALTROUND))
-
+  let match = await bcrypt.compare(password,user.password);
+  if(match){
+    return next(new AppError(`same password`,400));
+  }
+  user.password = await bcrypt.hash(password,parseInt(process.env.SALT_ROUND));
   user.sendCode=null;
-
+  user.changePasswordTime=Date.now();
   await user.save();
+  return res.status(200).json({message:"success"});
+}
+export const deleteInvalidConfirm = async(req,res,next)=>{
 
-  return res.status(200).json({ message:"success"})
+  const users = await userModel.deleteMany({confirmEmail:false});
 
-
+  return res.status(200).json({message:"success"});
 }

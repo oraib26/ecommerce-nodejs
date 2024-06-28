@@ -1,16 +1,46 @@
 import { Router } from "express";
-import * as controller from './subcategory.controller.js'
-import fileUpload, { fileTypes } from "../../utls/multer.js";
+import * as subcategoryController from "./subcategory.controller.js";
+import fileUpload, { fileValidation } from "../../utls/multer.js";
+import { asyncHandler } from "../../utls/errorHandling.js";
+
 import { auth } from "../../middleware/auth.js";
-const router = Router({mergeParams: true});
+import { endPoint } from "./subcategory.endPoint.js";
+import { validation } from "../../middleware/validation.js";
+import * as validators from "./subcategory.validation.js";
+const router = Router({ mergeParams: true });
 
-
-router.post('/',auth(),fileUpload(fileTypes.image).single('image'),controller.create);
-router.get('/',controller.getAll);
-router.get('/active',controller.getActive);
-router.get('/:id',controller.getDetails);
-router.patch('/:id',auth(),fileUpload(fileTypes.image).single('image'),controller.update);
-router.delete('/:id',auth(),controller.destroy);
-
-
+router.post(
+  "/",
+  auth(endPoint.create),
+  fileUpload(fileValidation.image).single("image"),
+  validation(validators.createsubCategory),
+  asyncHandler(subcategoryController.createSubCategory)
+);
+router.get(
+  "/",
+  auth(endPoint.getAll),
+  asyncHandler(subcategoryController.getAllSubCategories)
+);
+router.get(
+  "/getActive",
+  asyncHandler(subcategoryController.getActivesubCategory)
+);
+router.get(
+  "/getSpecific/:id",
+  validation(validators.validationid),
+  asyncHandler(subcategoryController.getDetailsubCategories)
+);
+router.patch(
+  "/:id",
+  auth(endPoint.update),
+  fileUpload(fileValidation.image).single("image"),
+  validation(validators.updateSub),
+  asyncHandler(subcategoryController.updatesubCategories)
+);
+router.delete(
+  "/:id",
+  auth(endPoint.delete),
+  validation(validators.validationid),
+  asyncHandler(subcategoryController.deletesubCategories)
+);
 export default router;

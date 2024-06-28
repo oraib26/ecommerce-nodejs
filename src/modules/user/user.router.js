@@ -1,16 +1,18 @@
 import { Router } from "express";
-import * as controller from './user.controller.js'
+import * as userController from "./user.controller.js";
 import { auth } from "../../middleware/auth.js";
-import { endPoints } from "./user.role.js";
+import { endpoints } from "./user.endPoint.js";
+import { asyncHandler } from "../../utls/errorHandling.js";
+
 const router = Router();
-
-
-
-router.get('/',auth(endPoints.getUsers),controller.getUsers);
-router.get('/userData',auth(endPoints.userData),controller.getUserData);
-
-
-
-
-
+router.get(
+  "/AllUser",
+  auth(endpoints.getAll),
+  asyncHandler(userController.getAllUser)
+);
+router.get(
+  "/dataUser",
+  auth(endpoints.getUser),
+  asyncHandler(userController.getDateUser)
+);
 export default router;

@@ -3,7 +3,6 @@ import categoryModel from "../../../db/model/category.model.js";
 import cloudinary from "../../utls/cloudinary.js";
 
 export const create = async (req, res) => {
-
   req.body.categoryName = req.body.categoryName.toLowerCase();
 
   if (await categoryModel.findOne({ categoryName: req.body.categoryName })) {
@@ -20,8 +19,8 @@ export const create = async (req, res) => {
 
   req.body.image = { secure_url, public_id };
 
-  req.body.createdBy= req.user._id;
-  req.body.updatedBy= req.user._id;
+  req.body.createdBy = req.user._id;
+  req.body.updatedBy = req.user._id;
   const category = await categoryModel.create(req.body);
 
   return res.json({ message: category });
@@ -29,8 +28,7 @@ export const create = async (req, res) => {
 
 export const getAll = async (req, res) => {
   const categories = await categoryModel.find({}).populate({
-    path:'subcategory',
-
+    path: "subcategory",
   });
   return res.status(200).json({ message: "success", categories });
 };
@@ -89,7 +87,7 @@ export const update = async (req, res) => {
   }
 };
 
-export const destroy = async (req,res)=>{
+export const destroy = async (req, res) => {
   const category = await categoryModel.findByIdAndDelete(req.params.id);
 
   if (!category) {
@@ -97,8 +95,5 @@ export const destroy = async (req,res)=>{
   }
   await cloudinary.uploader.destroy(category.image.public_id);
 
-  return res.status(200).json({mesaage:"success", category})
-
-
-
-}
+  return res.status(200).json({ mesaage: "success", category });
+};

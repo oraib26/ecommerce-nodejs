@@ -1,12 +1,20 @@
 import { Router } from "express";
-import * as cotroller from './review.controller.js'
-import fileUpload, { fileTypes } from "../../utls/multer.js";
-import { endPoints } from "../review/review.role.js";
+import * as reviewController from "./review.controller.js";
 import { auth } from "../../middleware/auth.js";
-const router = Router({mergeParams: true});
+import { asyncHandler } from "../../utls/errorHandling.js";
+import { endpoints } from "./review.endPoint.js";
+import fileUpload, { fileValidation } from "../../utls/multer.js";
+import { validation } from "../../middleware/validation.js";
+import { createReviews } from "./review.validation.js";
 
-router.post('/',auth(endPoints.create),fileUpload(fileTypes.image).single('image'), cotroller.create)
+const router = Router({ mergeParams: true });
 
-
+router.post(
+  "/",
+  auth(endpoints.create),
+  fileUpload(fileValidation.image).single("image"),
+  validation(createReviews),
+  asyncHandler(reviewController.createReview)
+);
 
 export default router;

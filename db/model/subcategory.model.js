@@ -1,41 +1,32 @@
-import mongoose, { Schema, Types, model } from "mongoose";
-
+import mongoose, { Schema, model, Types } from "mongoose";
 const subcategorySchema = new Schema(
-    {
-        subcategoryName:{
-            type: String,
-            required: true,
-            unique:true
-
-        },
-        image:{
-            type:Object,
-        },
-        slug:{
-            type:String,
-            required:true
-        },
-        status:{
-            type:String,
-            default:"not active"
-                
-
-        },
-        categoryId:{
-            type:Types.ObjectId,
-            ref:"Category",
-            required:true
-        },
-        createdBy:{type:Types.ObjectId, ref:'User', required:false},
-        updatedBy:{type:Types.ObjectId, ref:'User', required:false},
-       
-
+  {
+    name: {
+      type: String,
+      required: true,
+      unique: true,
     },
-    {
-        timestamps:true
-
-    }
-)
-const subcategoryModel = model('Subcategory',subcategorySchema);
-
+    slug: {
+      type: String,
+      required: true,
+    },
+    image: {
+      type: Object,
+      required: true,
+    },
+    status: {
+      type: String,
+      default: "Active",
+      enum: ["Active", "Inactive"],
+    },
+    categoryId: { type: Types.ObjectId, ref: "Category", required: true },
+    createdBy: { type: Types.ObjectId, ref: "User" },
+    updatedBy: { type: Types.ObjectId, ref: "User" },
+  },
+  {
+    timestamps: true,
+  }
+);
+const subcategoryModel =
+  mongoose.models.Subcategory || model("Subcategory", subcategorySchema);
 export default subcategoryModel;

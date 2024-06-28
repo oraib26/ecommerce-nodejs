@@ -1,84 +1,74 @@
 import slugify from "slugify";
-import categoryModel from "../../../db/model/category.model.js";
-import subcategoryModel from "../../../db/model/subcategory.model.js";
+import categoryModel from "../../../DB/model/category.model.js";
+import productModel from "../../../DB/model/product.model.js";
+import subcategoryModel from "../../../DB/model/subcategory.model.js";
 import cloudinary from "../../utls/cloudinary.js";
-import productModel from "../../../db/model/product.model.js";
-import { pagination } from "../../../src/utls/pagination.js";
+import { pagination } from "../../utls/pagination.js";
 
-export const create = async (req, res) => {
-  const { productName, price, discount, categoryId, subCategoryId } = req.body;
-  const category = await categoryModel.findById(categoryId);
+import { AppError } from "../../utls/AppError.js";
 
-  if (!category) {
-    return res.status(404).json({ message: "category not found" });
+export const createProduct = async (req, res, next) => {
+  const { name, price, discount, categoryId, subcategoryId } = req.body;
+  const checkCategory = await categoryModel.findById(categoryId);
+  if (!checkCategory) {
+    return next(new AppError(`category not found`, 404));
   }
-  const subCategory = await subcategoryModel.findOne({
-    _id: subCategoryId,
-    categoryId: categoryId,
-  });
-  if (!subCategory) {
-    return res.status(404).json({ message: "sub category not found" });
+  const checkSubCategory = await subcategoryModel.findById(subcategoryId);
+  if (req.body.subcategoryId) {
+    if (!checkSubCategory) {
+      return next(new AppError(`subcategory not found`, 404));
+    }
   }
-  req.body.slug = slugify(productName);
-  req.body.finalPrice = price - (price * (discount || 0)) / 100;
 
+  req.body.slug = slugify(name);
+  req.body.finalPrice = price - ((price * (discount || 0)) / 100).toFixed(2);
   const { secure_url, public_id } = await cloudinary.uploader.upload(
     req.files.mainImage[0].path,
-    {
-      folder: `${process.env.STORENAME}/${productName}`,
-    }
+    { folder: `${process.env.APP_NAME}/product/${req.body.name}/mainImages` }
   );
-  //return res.json(req.files)
-
   req.body.mainImage = { secure_url, public_id };
   req.body.subImages = [];
-
   for (const file of req.files.subImages) {
     const { secure_url, public_id } = await cloudinary.uploader.upload(
-      req.files.subImages[0].path,
-      {
-        folder: `${process.env.STORENAME}/${productName}/subImages`,
-      }
+      file.path,
+      { folder: `${process.env.APP_NAME}/product/${req.body.name}/subimages` }
     );
     req.body.subImages.push({ secure_url, public_id });
   }
+  req.body.createdBy = req.user._id;
+  req.body.updatedBy = req.user._id;
   const product = await productModel.create(req.body);
-
+  if (!product) {
+    return next(new AppError(`error while creating product`, 400));
+  }
   return res.status(201).json({ message: "success", product });
 };
-
-export const getAll = async (req, res) => {
+export const getproduct = async (req, res) => {
   const { skip, limit } = pagination(req.query.page, req.query.limit);
-
   let queryObj = { ...req.query };
-
   const execQuery = ["page", "limit", "sort", "search", "fields"];
-
   execQuery.map((ele) => {
     delete queryObj[ele];
   });
-
   queryObj = JSON.stringify(queryObj);
   queryObj = queryObj.replace(
-    /gt|gte|It|Ite|in|nin|eq/g,
+    /gt|gte|lt|lte|in|nin|eq/g,
     (match) => `$${match}`
   );
   queryObj = JSON.parse(queryObj);
-  const mongoseQuery = await productModel
+  const moongoseQuery = productModel
     .find(queryObj)
     .skip(skip)
-    .limit(limit);
-
-  /* .populate({
-    path: 'reviews',
-    populate:{
-      path: 'userId',
-      select:'userName -_id'
-    }
-  }).select('productName');*/
-
+    .limit(limit)
+    .populate({
+      path: "reviews",
+      populate: {
+        path: "userId",
+        select: "userName -_id",
+      },
+    });
   if (req.query.search) {
-    mongoseQuery.find({
+    moongoseQuery.find({
       $or: [
         { name: { $regex: req.query.search } },
         { description: { $regex: req.query.search } },
@@ -87,9 +77,16 @@ export const getAll = async (req, res) => {
   }
 
   const count = await productModel.estimatedDocumentCount();
-  mongoseQuery.select(req.query.fields);
+  moongoseQuery.select(req.query.fields);
+  let products = await moongoseQuery.sort(req.query.sort);
 
-  const products = await mongoseQuery.sort(req.query.sort);
+  products = products.map((product) => {
+    return {
+      ...product.toObject(),
+      mainImage: product.mainImage.secure_url,
+      subImages: product.subImages.map((img) => img.secure_url),
+    };
+  });
 
   return res.status(200).json({ message: "success", count, products });
 };

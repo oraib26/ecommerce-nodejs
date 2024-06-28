@@ -1,23 +1,19 @@
 import multer from "multer";
-
-export const fileTypes = {
+export const fileValidation = {
   image: ["image/png", "image/jpeg", "image/webp"],
   pdf: ["application/pdf"],
+  excel: ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
 };
-
-function fileUpload(customTypes = []) {
+function fileUpload(customValidation = []) {
   const storage = multer.diskStorage({});
-
   function fileFilter(req, file, cb) {
-    if (customTypes.includes(file.mimetype)) {
+    if (customValidation.includes(file.mimetype)) {
       cb(null, true);
-    }
-    else{
-        cb('invalid format', false);
+    } else {
+      cb("invalid format", false);
     }
   }
-  const upload = multer({fileFilter, storage});
+  const upload = multer({ fileFilter, storage });
   return upload;
 }
-
 export default fileUpload;
