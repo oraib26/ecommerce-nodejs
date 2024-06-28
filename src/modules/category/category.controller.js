@@ -1,6 +1,7 @@
 import slugify from "slugify";
-import categoryModel from "../../../db/model/category.model.js";
+
 import cloudinary from "../../utls/cloudinary.js";
+import categoryModel from "../../../DB/model/category.model.js";
 
 export const create = async (req, res) => {
   req.body.categoryName = req.body.categoryName.toLowerCase();

@@ -1,10 +1,11 @@
-import userModel from "../../../DB/model/user.model.js";
+
 import bcrypt from 'bcryptjs';
 import  jwt from 'jsonwebtoken';
 import { sendEmail } from "../../utls/sendEmail.js";
 import { customAlphabet } from 'nanoid'
 import xlsx from "xlsx";
 import { AppError } from "../../utls/AppError.js";
+import userModel from '../../../DB/model/user.model.js';
 
 
 export const getUsers = async(req,res,next)=>{

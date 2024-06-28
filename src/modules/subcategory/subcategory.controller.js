@@ -1,9 +1,10 @@
 import slugify from "slugify";
-import subcategoryModel from "../../../DB/model/subcategory.model.js";
-import categoryModel from "../../../DB/model/category.model.js";
+
 import cloudinary from "../../utls/cloudinary.js";
 import { pagination } from "../../utls/pagination.js";
 import { AppError } from "../../utls/AppError.js";
+import subcategoryModel from "../../../DB/model/subcategory.model.js";
+import categoryModel from "../../../DB/model/category.model.js";
 
 export const createSubCategory = async (req, res, next) => {
   const name = req.body.name.toLowerCase();

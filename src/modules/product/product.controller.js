@@ -1,11 +1,10 @@
 import slugify from "slugify";
-import categoryModel from "../../../DB/model/category.model.js";
-import productModel from "../../../DB/model/product.model.js";
-import subcategoryModel from "../../../DB/model/subcategory.model.js";
 import cloudinary from "../../utls/cloudinary.js";
 import { pagination } from "../../utls/pagination.js";
-
 import { AppError } from "../../utls/AppError.js";
+import categoryModel from "../../../DB/model/category.model.js";
+import subcategoryModel from "../../../DB/model/subcategory.model.js";
+import productModel from "../../../DB/model/product.model.js";
 
 export const createProduct = async (req, res, next) => {
   const { name, price, discount, categoryId, subcategoryId } = req.body;
